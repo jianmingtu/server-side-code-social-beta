@@ -1,0 +1,24 @@
+{
+  "name": "server-side-code-social-alpha",
+  "version": "1.0.0",
+  "description": "\"# server-side-code-social-alpha\"",
+  "main": "index.js",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongodb": "^3.6.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BCIT-SSD-2020-21/server-side-code-social-alpha.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BCIT-SSD-2020-21/server-side-code-social-alpha/issues"
+  },
+  "homepage": "https://github.com/BCIT-SSD-2020-21/server-side-code-social-alpha#readme"
+}
