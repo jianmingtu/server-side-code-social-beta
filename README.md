@@ -3,6 +3,8 @@
 
 Lambda Function on AWS 
 
+ROOT API:  https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts
+
 1) GetPostsMongoDB
 API ENDPOINT: GET  /posts/
 
