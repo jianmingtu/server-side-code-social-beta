@@ -187,23 +187,14 @@ async function connectToDatabase() {
 
 exports.handler = async (event, context) => {
     context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        
-        const {imageUrl, description, type} = JSON.parse(event.body);
-                
+    try {       
         // Connect to mongodb database
         const db = await connectToDatabase();
-        
-        // add properties only presented by clients
-        const addedObj = {};
-        if(imageUrl) addedObj.imageUrl = imageUrl
-        if(description) addedObj.description = description
-        if(type) addedObj.type = type
 
         // Update database document
         const post = await db.collection('Posts').updateOne(
             {_id: ObjectId(event.pathParameters.postId)}, 
-            {$set : {...addedObj }})
+            {$set : { ...JSON.parse(event.body) }})
 
         // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
         return {
