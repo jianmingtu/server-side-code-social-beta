@@ -1,43 +1,40 @@
-const MongoClient = require('mongodb').MongoClient;
-require('dotenv').config()
-
-// replace the uri string with your connection string.
+const { MongoClient } = require('mongodb');
 const uri = process.env.MONGODB_URI
-
-// const query = async (collection) => {
-
-//     // connect to database 
-//      const connection = await MongoClient.connect(uri);
-
-//      const db = connection.db("socialCafe")
-     
-//      // select the table and return
-//      const ret= db.collection(collection).find({}).toArray();
-// }
-
-// try {
-
-//     const result = query('')
-//      console.log(result)
-// } catch(error) {
-
-// }
-
-let db
-
-const loadDB = async () => {
-
-    try {
-        const client = await MongoClient.connect(uri);
-        db = client.db('socialCafe');
-    } catch (err) {
-        Raven.captureException(err);
+let cachedDb = null;
+async function connectToDatabase() {
+    if (cachedDb) {
+        return cachedDb;
     }
+    // Connect to our MongoDB database hosted on MongoDB Atlas
+    const client = await MongoClient(MONGODB_URI, {
+        useUnifiedTopology: true,
+        useNewUrlParser: true,
+    }).connect();
+    // Specify which database we want to use
+    const db = client.db('socialCafe');
+    cachedDb = db;
     return db;
+}
+exports.handler = async (event, context) => {
+    context.callbackWaitsForEmptyEventLoop = false;
+    try {
+        // Connect to mongodb database
+        const db = await connectToDatabase();
+        
+        const posts = await db.collection('Posts').find({}).toArray();
+        
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                posts: posts
+            }),
+        };
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                errorMsg: `Error while creating a user: ${err}`,
+            }),
+        };
+    }
 };
-
-
-const db1 =   loadDB();
-
- db1.collection('users').insertOne({username: "Sam"});
-

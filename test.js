@@ -2,7 +2,8 @@
 const MongoClient = require('mongodb').MongoClient;
 require('dotenv').config()
 
-const MONGODB_URI = "mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/test"
+const uri = process.env.MONGODB_URI
+
 let cachedDb = null;
 function connectToDatabase (uri) {
   console.log('=> connect to database');
