@@ -1,17 +1,8 @@
 //
-//  Local express test
+//  AWS Lambda function
 //
-const express = require('express')
-require('dotenv').config()
-
-const app = express()
-app.use(express.json())
-
 const { MongoClient } = require('mongodb');
-
-// replace the uri string with your connection string.
-const uri = process.env.MONGODB_URI
-
+const uri = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 let cachedDb = null;
 async function connectToDatabase() {
     if (cachedDb) {
@@ -27,9 +18,8 @@ async function connectToDatabase() {
     cachedDb = db;
     return db;
 }
-
-const GetPostsMongoDB = async (event, context) => {
-    //context.callbackWaitsForEmptyEventLoop = false;
+exports.handler = async (event, context) => {
+    context.callbackWaitsForEmptyEventLoop = false;
     try {
         // Connect to mongodb database
         const db = await connectToDatabase();
@@ -50,19 +40,5 @@ const GetPostsMongoDB = async (event, context) => {
             }),
         };
     }
-}
+};
 
-app.get('/posts', async (req, res) => {
-    try {
-    const posts = await GetPostsMongoDB()
-    res.send({posts})
-    } catch (error) {
-        console.error(error)
-        res.send({error: error.message})
-    }
-})
-
-const port = 5000
-app.listen(port, () => {
-  console.log(`listening on port ${port}`)
-})
