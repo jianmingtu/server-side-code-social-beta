@@ -28,7 +28,32 @@ async function connectToDatabase() {
     return db;
 }
 
-const GetPostsMongoDB = async (event, context) => {
+const GetPostsMongoDB = async (vent, context, callback) => {
+    //context.callbackWaitsForEmptyEventLoop = false;
+    try {
+        // Connect to mongodb database
+        const db = await connectToDatabase();
+        
+        const posts = await db.collection('Posts').find({}).toArray();
+        
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                posts: posts
+            }),
+        };
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                errorMsg: `Error while creating a user: ${err}`,
+            }),
+        };
+    }
+}
+
+
+const CreatePostMongoDB = async (event, context) => {
     //context.callbackWaitsForEmptyEventLoop = false;
     try {
         // Connect to mongodb database
@@ -60,6 +85,14 @@ app.get('/posts', async (req, res) => {
         console.error(error)
         res.send({error: error.message})
     }
+})
+
+// POST /api/posts
+router.post('/', authorize, async (req, res) => {
+const postDetails = req.body
+const user = req.user
+const post = await CreatePostMongoDB({postDetails, user})
+res.send({post})
 })
 
 const port = 5000
