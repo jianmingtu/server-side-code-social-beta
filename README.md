@@ -136,9 +136,7 @@ exports.handler = async (event, context) => {
                 }),
             };
         }
-    };
-    
-    c) Database Layer, 
+    }; 
 
 ```
 
