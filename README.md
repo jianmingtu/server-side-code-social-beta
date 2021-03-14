@@ -1,7 +1,6 @@
-"# server-side-code-social-alpha" 
+# AWS Lambda Functions and API End Points
 
-
-Lambda Function on AWS 
+## API End Points and testing
 
 ROOT API:  https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/
 
@@ -10,8 +9,10 @@ Test using CURL
 Get Posts
 > curl https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/
 
-Create a Post
-> curl -X POST -H "Content-Type: application/json" -d '{"imageUrl": "story book", "description": "Stuff and Things", "type": "An amazing blog post about both stuff and things."}' https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts
+```diff
++ Create a Post
++ > curl -X POST -H "Content-Type: application/json" -d '{"imageUrl": "story book", "content": "Stuff and Things"}' https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts
+```
 
 Get Post By Id
 > curl https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/'6047fe3bfde94600074c889d'
@@ -22,10 +23,14 @@ Delete a Post By Id
 Update a Post By Id
 > curl -X PUT -H "Content-Type: application/json" -d '{"imageUrl": "wayne is awesome", "description": "Stuff and Things", "type": "image."}' https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/'6046a9c8853435364a6bd40b'
 
+## Cognito User Pool:
+    Cognito service,  manage User Pool, create SocialCafeUser, ...
 
-1) GetPostsMongoDB
+We should have already created a cognito user pool, but since we did not document it anyway, so we are going to add the cognitor section here and move this content to somewhere (maybe the front-end readme file or )  
+
+## 1) GetPostsMongoDB
 API ENDPOINT: GET  /posts/
-
+```
 const { MongoClient } = require('mongodb');
 const uri = process.env.MONGODB_URI
 let cachedDb = null;
@@ -67,75 +72,78 @@ exports.handler = async (event, context) => {
     }
 };
 
+```
 
 
-2)  CreatePostMongoDB
-API ENDPOINT: POST  /posts/
-             body : {description: xxx, imgUrl: xxx, type: xxx}
+## <font color=green> 2)  CreatePostMongoDB </font>
+```
+    a) API ENDPOINT: POST  /posts/
+             body : {content: xxx, imgUrl: xxx}
+    
+   b) Add JWT authorizer:
+    Steps: API GateWay, select socialCafeAPI, Authorizers ( left panel), create New Authorizer as 'socialCafe', select 'Cognito' as Type, select 'SocialCafeUser' as Cognito User Pool, and select 'Authorization' as Token Source. 
 
+   c) Add Authorization:
+    Steps: API GateWay, select socialCafeAPI, resources ( left panel), select POST,  Method Request, select 'socialCafe' as Authorization
 
-const { MongoClient } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
+    d) Add Mapping
+    Steps: API GateWay, select socialCafeAPI, resources ( left panel), select POST,  Integration Request, Mapping Templates, select 'When there are no templates defined (recommended)', add 'application/json', add the code snippet below into the template,
+
+    #set($allParams = $input.params())
+    {
+        "body" : $input.json('$'),
+        "user" : {
+            "id" : "$context.authorizer.claims.sub",
+            "username" : "$context.authorizer.claims['cognito:username']",
+            "email" : "$context.authorizer.claims.email"
+        }
     }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
 
-exports.handler = async (event, context, callback) => {
-    context.callbackWaitsForEmptyEventLoop = false;
-        
-    try {
-        
-         const {imageUrl, description, type } = event;
-        
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-      
-        // const postDetails = req.body
-        // const user = req.user
-        
-        const post = await db.collection('Posts').insertOne({
-            imageUrl: imageUrl,
-            description: description,
-            type: type,
-            totalLikes: 0,
-            totalComments: 0,
-            timestamp: Date.now(),
-            // user: { 
-            //   _id: ObjectId(user._id),       
-            //   username: user.username 
-            // }
-        })
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                post: post.ops[0]
-            }),
-        };
-    } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                errorMsg: `Error while creating a user: ${err}`,
-            }),
-        };
-    }
-};
+    e) enable CORS,  either one will do the same job,
+        1) we have add 'Access-Control-Allow-Origin' : '*' in API Lambda's response
+        2) API GateWay, select socialCafeAPI, resources (left panel), select POST,  Method Response, add 'Access-Control-Allow-Origin'. go back to the POST's Integration Response, write '*' as Mapping value to Response header 'Access-Control-Allow-Origin'
 
+    f) AWS Lambda API interface CreatePostMongoDB
 
-3) GetSinglePostMongDB 
+        const socialCafeDB = require('/opt/nodejs/socialCafeDatabase')
+
+        exports.handler = async (event, context, callback) => {
+    
+        context.callbackWaitsForEmptyEventLoop = false;
+            
+        try {
+            
+            const body = event.body
+            const user = event.user
+            
+            const db = await socialCafeDB()
+            
+            const post = await db.createPost({user, body})
+            
+            return {
+                statusCode: 200,
+                headers:{ 'Access-Control-Allow-Origin' : '*' },
+                body: JSON.stringify({
+                    post: post.ops[0]
+                }),
+            };
+        } catch (err) {
+            return {
+                statusCode: 500,
+                headers:{ 'Access-Control-Allow-Origin' : '*' },
+                body: JSON.stringify({
+                    errorMsg: `Error while creating a user: ${err}`,
+                }),
+            };
+        }
+    };
+    
+    c) Database Layer, 
+
+```
+
+## 3) GetSinglePostMongDB 
+```
  API ENDPOINT: POST  /posts/_id
 _id above is the post id being previously created by database automatically
 
@@ -179,8 +187,10 @@ exports.handler = async (event, context) => {
         };
     }
 };
+```
 
-// 4. UpdateSinglePostMongoDB
+## 4. UpdateSinglePostMongoDB
+```
 API ENDPOINT: PUT  /posts/_id
              body : {description: xxx, imgUrl: xxx, type: xxx}
 _id above is the post id being previously created by database automatically             
@@ -229,8 +239,10 @@ exports.handler = async (event, context) => {
         };
     }
 };
+```
 
-// 5. DeleteSinglePostMongoDB
+## 5. DeleteSinglePostMongoDB
+```
 API ENDPOINT: DELETE  /posts/_id
 _id above is the post id being previously created by database automatically
 
@@ -278,5 +290,5 @@ exports.handler = async (event, context) => {
         };
     }
 };
-
+```
 
