@@ -445,4 +445,5 @@ headers: { Authentication : JWT-token }
 
 
 updated 8 lambda functions above, see the picture below:
+most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
 ![](https://i.imgur.com/0y8ec2y.png)        
