@@ -3,6 +3,7 @@ const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/social
 
 
 module.exports = async (event, context) => {
+    
 
     // Connect to our MongoDB database hosted on MongoDB Atlas
     const client = await MongoClient(MONGODB_URI, {
@@ -22,28 +23,24 @@ module.exports = async (event, context) => {
         })
     }
 
-    async function getPostComments({ postId }) {
-        return await db.comments.find({ postId: ObjectId(postId) }).sort({ "timestamp": -1 }).toArray()
-    }
+    async function createComment({event}) {
 
-     async function createComment({user, body }) {
-
-        const {postId, comment} = body
+        const {body, postId, user} = event
         
         const session = client.startSession()
         session.startTransaction()
         try {
             
             //  insert comment
-            const result = await db.comments.insertOne({
-                ...comment,
+            const result = await db.collection('Comments').insertOne({
+                ...body,
                 postId: ObjectId(postId),
-                ...user,  
+                user,  
                 timestamp: Date.now()
             })
     
             //  increase total
-              await db.posts.findOneAndUpdate({ "_id": ObjectId(postId) }, {$inc: { "totalComments": 1 }})
+              await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, {$inc: { "totalComments": 1 }})
               
               await session.commitTransaction()
               
@@ -56,8 +53,56 @@ module.exports = async (event, context) => {
         }
     }
 
-    return {
+    async function UpdateComment({ event }) {
+
+            const {body, user, postId, commentId } = event
+            
+            try {
+                
+
+                //  update comment 
+                const result = await db.collection('Comments').updateOne(
+                    {_id: ObjectId(commentId)}
+                    ,
+                    {$set :
+                        {
+                            ...body,
+                            postId: ObjectId(postId),
+                            user,  
+                            timestamp: Date.now()
+                        }
+                    })
+                
+                return result
+            } catch (error) {
+                throw error
+            }
+        }    
+
+
+    async function deleteComment({ event }) {
+
+            const {body, user, postId, commentId } = event
+            
+            try {
+                
+
+                //  delete comment 
+                const result = await db.collection('Comments').deleteOne(
+                    {_id: ObjectId(commentId)}
+                )
+                
+                return result
+            } catch (error) {
+                throw error
+            }
+        }       
+
+
+     return {
         createPost,
         createComment,
+        UpdateComment,
+        deleteComment
     }
 }
