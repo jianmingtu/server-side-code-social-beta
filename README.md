@@ -447,3 +447,28 @@ headers: { Authentication : JWT-token }
 updated 8 lambda functions above, see the picture below:
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
 ![](https://i.imgur.com/0y8ec2y.png)        
+
+
+## 8. GetCommentsMongoDB
+API ENDPOINT: 
+GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments
+headers: { Authentication : JWT-token }
+
+   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const comments = await db.getComments({event})
+        
+        return {comments};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};

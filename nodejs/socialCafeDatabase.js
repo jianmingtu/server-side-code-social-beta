@@ -96,13 +96,23 @@ module.exports = async (event, context) => {
             } catch (error) {
                 throw error
             }
-        }       
+        }   
+        
+    async function getComments({event}) 
+    {
+        const {postId} = event
+    
+        const comments = await db.collection('Comments').find({ postId: ObjectId(postId) }).toArray()
+        return comments
+    }
+        
 
 
      return {
         createPost,
         createComment,
         UpdateComment,
-        deleteComment
+        deleteComment,
+        getComments
     }
 }
