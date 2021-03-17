@@ -29,47 +29,34 @@ Update a Post By Id
 We should have already created a cognito user pool, but since we did not document it anyway, so we are going to add the cognitor section here and move this content to somewhere (maybe the front-end readme file or )  
 
 ## 1) GetPostsMongoDB
-API ENDPOINT: GET  /posts/
+API ENDPOINT: GET  /posts?search=bcitjimmy 
+              GET  /posts?search=Brother Bang
 ```
-const { MongoClient } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
-exports.handler = async (event, context) => {
-    context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-        
-        const posts = await db.collection('Posts').find({}).toArray();
-            
-        return {
-            posts: posts
-        };
+a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
 
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const post = await db.getPosts({event})
+        
+        return {post};
+        
     } catch (err) {
-        return {
-            statusCode: 500,
-            headers:{ 'Access-Control-Allow-Origin' : '*' },
-            body: JSON.stringify({
-                errorMsg: `Error while doing getPostsMongoDB: ${err}`,
-            }),
-        };
+        throw new Error(`Error while running getPostsMongoDB : ${err}`)
     }
 };
+
+b)   Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+{
+    "search": "$util.escapeJavaScript($input.params().querystring.get('search'))"
+}
 
 ```
 
@@ -145,37 +132,22 @@ _id above is the post id being previously created by database automatically
         "postId" : "$util.escapeJavaScript($input.params('postId'))"
     }
 
-const { MongoClient, ObjectId } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
 
-exports.handler = async (event, context) => {
-    
+exports.handler = async (event, context, callback) => {
+
     context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-        const post = await db.collection('Posts').findOne({"_id" : ObjectId(event.postId)});
         
-        // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {post}
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const post = await db.getPost({event})
+        
+        return {post};
         
     } catch (err) {
-        throw new Error(`Error while doing GetSinglePostMongoDB: ${err}`)
+        throw new Error(`Error while creating : ${err}`)
     }
 };
 

@@ -166,13 +166,152 @@ module.exports = async (event, context) => {
   }
 
 
+  async function getPosts({ event }) {
+  
+  const { search = null, limit = 100, skip = 0} = event 
+
+    const aggregateOptions = [
+      {
+        $lookup: {
+          from: 'Likes',
+          as: 'likes',
+          let: {
+            'postId': '$_id',
+          },
+          pipeline: [
+            {
+                $match: { 
+                      $expr: {
+                        $and: [ 
+                          { $eq: ['$postId', '$$postId'] }
+                        ]
+                      }     
+                }
+            }
+          ]
+        },
+      },
+      { $addFields: {
+        "liked": { "$size": "$likes" }
+      }},
+      { $project: {
+         "likes": 0
+      }},
+      {
+
+        $lookup: {
+          from: 'Comments',
+          as: 'comments',
+          let: {
+            'postId': '$_id',
+          },
+          pipeline: [
+            {
+                $match: { 
+                      $expr: {
+                        $and: [ 
+                          { $eq: ['$postId', '$$postId'] }
+                        ]
+                      }     
+                }
+            }
+          ]
+        }
+      },
+      { $addFields: {
+        "commented": { "$size": "$comments" }
+      }},
+      { $project: {
+         "comments": 0
+      }}      
+    ]
+    
+    if (search) {
+      aggregateOptions.push({
+        $match: { 
+          $expr: {
+            $or: [ 
+              { $regexMatch: {input: '$content', regex: new RegExp(`${search}`), options: "i" }},
+              { $regexMatch: {input: '$user.username', regex: new RegExp(`${search}`), options: "i" }}
+            ]
+          } 
+        }
+      })
+    }
+ 
+    return await db.collection('Posts').aggregate(aggregateOptions).sort({ timestamp: -1, likes: 1}).skip(skip).limit(limit || 20).toArray()
+  }
+
+
+     async function getPost({ event }) {
+        
+    const {postId} = event
+    
+    const results = await db.collection('Posts').aggregate([
+      {
+        $match: {
+          _id: ObjectId(postId),
+        }
+      },
+      {
+        $lookup: {
+          from: 'Comments',
+          as: 'comments',
+          let: {
+            'postId': '$_id'
+          },
+          pipeline: [
+            {
+              $match: { $expr: { $eq: ['$postId', '$$postId'] } }
+            }, {
+              '$sort': { 'timestamp': -1 }
+            },
+            { $limit: 20 },
+          ]
+        }
+      },
+      {
+        $lookup: {
+        from: 'Likes',
+        as: 'likes',
+        let: {
+          'postId': '$_id',
+        },
+        pipeline: [
+          {
+            $match: { 
+              $expr: {
+                $and: [ 
+                  { $eq: ['$postId', '$$postId'] }
+                ]
+              } 
+            }
+          }
+        ]
+      },
+    },
+    { $addFields: {
+      "liked": { "$size": "$likes" }
+    }},
+    { $project: {
+      "likes": 0
+    }}
+
+    ]).limit(1).toArray()
+
+    return results[0]
+  }
+
+
      return {
         createPost,
         createComment,
         UpdateComment,
         deleteComment,
         createLike,
-        deleteLike
+        deleteLike,
+        getPosts,
+        getPost
 
     }
 }
