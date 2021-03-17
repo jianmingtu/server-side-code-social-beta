@@ -96,13 +96,83 @@ module.exports = async (event, context) => {
             } catch (error) {
                 throw error
             }
-        }       
+        }    
+        
+         async function createLike({event}) {
+
+    const {postId, userId, user} = event
+    
+    const like = await db.collection('Likes').findOne({postId: ObjectId(postId), "user.id": userId })
+    if (like) {
+      return like
+    }
+    
+
+    const session = client.startSession()
+    session.startTransaction()
+    try {
+      const result = await db.collection('Likes').insertOne({
+        postId: ObjectId(postId),
+        user,
+        timestamp: Date.now()
+      })
+
+      const update = {
+        $inc: {
+          "totalLikes": 1
+        }
+      }
+
+      await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, update)
+      await session.commitTransaction()
+      return result.ops[0]
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      await session.endSession()
+    }
+  }
+  
+
+  async function deleteLike({ event }) {
+        
+    const {postId, user} = event
+    
+    const session = client.startSession()
+    session.startTransaction()
+    try {
+      const like = await db.collection('Likes').findOneAndDelete({postId: ObjectId(postId), "user.id": user.id })
+      if (!like.value) {
+        throw Error("No like exists for this user")
+      }
+
+      const update = {
+        $inc: {
+          "totalLikes": -1
+        }
+      }
+
+      await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, update)
+      await session.commitTransaction()
+      return like.value
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      await session.endSession()
+    }
+
+  }
 
 
      return {
         createPost,
         createComment,
         UpdateComment,
-        deleteComment
+        deleteComment,
+        createLike,
+        deleteLike
+
     }
 }

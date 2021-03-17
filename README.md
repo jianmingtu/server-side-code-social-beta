@@ -446,4 +446,102 @@ headers: { Authentication : JWT-token }
 
 updated 8 lambda functions above, see the picture below:
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
-![](https://i.imgur.com/0y8ec2y.png)        
+![](https://i.imgur.com/0y8ec2y.png)    
+
+## 8. CreateLikesMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/likes
+headers: { Authentication : JWT-token }
+
+   a) const session = client.startSession()
+    session.startTransaction()
+    try {
+      const result = await db.collection('Likes').insertOne({
+        postId: ObjectId(postId),
+        user,
+        timestamp: Date.now()
+      })
+
+      const update = {
+        $inc: {
+          "totalLikes": 1
+        }
+      }
+
+      await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, update)
+      await session.commitTransaction()
+      return result.ops[0]
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      await session.endSession()
+    }
+  }
+  
+ 
+
+  return {
+    createLike
+  }
+}
+
+
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))"
+        }  
+
+## 9. DeleteLikesMongoDB
+
+API ENDPOINT: 
+DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f60efe2d0007427875/likes
+headers: { Authentication : JWT-token }
+
+   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const post = await db.deleteLike({event})
+        
+        return {post};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
+
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))"
+        }  
+
+
+      
