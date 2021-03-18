@@ -441,14 +441,51 @@ headers: { Authentication : JWT-token }
             },
             "postId" : "$util.escapeJavaScript($input.params('postId'))",
             "commentId" : "$util.escapeJavaScript($input.params('commentId'))"
-        }    
+        }   
+
+## 8. GetCommentsMongoDB
+API ENDPOINT: 
+GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments
+headers: { Authentication : JWT-token }
+
+   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const post = await db.deleteLike({event})
+        
+        return {post};
+        const comments = await db.getComments({event})
+        
+        return {comments};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
 
 
-updated 8 lambda functions above, see the picture below:
-most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
-![](https://i.imgur.com/0y8ec2y.png)    
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
 
-## 8. CreateLikesMongoDB
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))"
+        }   
+
+## 9. CreateLikesMongoDB
 
 API ENDPOINT: 
 POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/likes
@@ -480,15 +517,11 @@ headers: { Authentication : JWT-token }
     }
   }
   
- 
-
   return {
     createLike
   }
 }
 
-
-
     b) Integration Request (When there are no templates defined (recommended) 
         application/json,
 
@@ -503,45 +536,12 @@ headers: { Authentication : JWT-token }
             "postId" : "$util.escapeJavaScript($input.params('postId'))"
         }  
 
-## 9. DeleteLikesMongoDB
+## 10. DeleteLikesMongoDB
 
 API ENDPOINT: 
 DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f60efe2d0007427875/likes
-headers: { Authentication : JWT-token }
+![](https://i.imgur.com/0y8ec2y.png)        
 
-   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+## 11. Conclusion 
 
-exports.handler = async (event, context, callback) => {
-
-    context.callbackWaitsForEmptyEventLoop = false;
-        
-    try {
-        
-        const db = await socialCafeDB()
-        
-        const post = await db.deleteLike({event})
-        
-        return {post};
-        
-    } catch (err) {
-        throw new Error(`Error while creating : ${err}`)
-    }
-};
-
-
-    b) Integration Request (When there are no templates defined (recommended) 
-        application/json,
-
-
-        {
-            "body" : $input.json('$'),
-            "user" : {
-                "id" : "$context.authorizer.claims.sub",
-                "username" : "$context.authorizer.claims['cognito:username']",
-                "email" : "$context.authorizer.claims.email"
-            },
-            "postId" : "$util.escapeJavaScript($input.params('postId'))"
-        }  
-
-
-      
+most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
