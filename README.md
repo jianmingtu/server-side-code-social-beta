@@ -284,8 +284,9 @@ DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f
             "postId" : "$util.escapeJavaScript($input.params('postId'))"
         }  
 
-## 11. Conclusion 
+## 11. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+
+## 12. Conclusion 
 
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
-
-![](https://i.imgur.com/sJNtODX.png)
+    ![](https://i.imgur.com/sJNtODX.png)
