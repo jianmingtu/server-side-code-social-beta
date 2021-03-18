@@ -32,7 +32,7 @@ We should have already created a cognito user pool, but since we did not documen
 API ENDPOINT: GET  /posts/
 ```
 const { MongoClient } = require('mongodb');
-const uri = process.env.MONGODB_URI
+const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
 let cachedDb = null;
 async function connectToDatabase() {
     if (cachedDb) {
@@ -55,18 +55,17 @@ exports.handler = async (event, context) => {
         const db = await connectToDatabase();
         
         const posts = await db.collection('Posts').find({}).toArray();
-        
+            
         return {
-            statusCode: 200,
-            body: JSON.stringify({
-                posts: posts
-            }),
+            posts: posts
         };
+
     } catch (err) {
         return {
             statusCode: 500,
+            headers:{ 'Access-Control-Allow-Origin' : '*' },
             body: JSON.stringify({
-                errorMsg: `Error while creating a user: ${err}`,
+                errorMsg: `Error while doing getPostsMongoDB: ${err}`,
             }),
         };
     }
@@ -74,10 +73,10 @@ exports.handler = async (event, context) => {
 
 ```
 
-
-## <font color=green> 2)  CreatePostMongoDB </font>
+## 2)  CreatePostMongoDB 
 ```
     a) API ENDPOINT: POST  /posts/
+            headers: { Authentication : JWT-token }
              body : {content: xxx, imgUrl: xxx}
     
    b) Add JWT authorizer:
@@ -105,38 +104,27 @@ exports.handler = async (event, context) => {
 
     f) AWS Lambda API interface CreatePostMongoDB
 
-        const socialCafeDB = require('/opt/nodejs/socialCafeDatabase')
+        const socialCafeDB = require('./nodejs/socialCafeDatabase')
 
         exports.handler = async (event, context, callback) => {
-    
-        context.callbackWaitsForEmptyEventLoop = false;
-            
-        try {
-            
-            const body = event.body
-            const user = event.user
-            
-            const db = await socialCafeDB()
-            
-            const post = await db.createPost({user, body})
-            
-            return {
-                statusCode: 200,
-                headers:{ 'Access-Control-Allow-Origin' : '*' },
-                body: JSON.stringify({
-                    post: post.ops[0]
-                }),
-            };
-        } catch (err) {
-            return {
-                statusCode: 500,
-                headers:{ 'Access-Control-Allow-Origin' : '*' },
-                body: JSON.stringify({
-                    errorMsg: `Error while creating a user: ${err}`,
-                }),
-            };
-        }
-    }; 
+
+            context.callbackWaitsForEmptyEventLoop = false;
+                
+            try {
+                
+                const body = event.body
+                const user = event.user
+                
+                const db = await socialCafeDB()
+                
+                const post = await db.createPost({user, body})
+                
+                return {post};
+                
+            } catch (err) {
+                throw new Error(`Error while creating : ${err}`)
+            }
+        };
 
 ```
 
@@ -145,6 +133,18 @@ exports.handler = async (event, context) => {
  API ENDPOINT: POST  /posts/_id
 _id above is the post id being previously created by database automatically
 
+    ** Integration Request (When there are no templates defined (recommended) 
+    application/json,
+    {
+        "body" : $input.json('$'),
+        "user" : {
+            "id" : "$context.authorizer.claims.sub",
+            "username" : "$context.authorizer.claims['cognito:username']",
+            "email" : "$context.authorizer.claims.email"
+        },
+        "postId" : "$util.escapeJavaScript($input.params('postId'))"
+    }
+
 const { MongoClient, ObjectId } = require('mongodb');
 const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
 let cachedDb = null;
@@ -164,34 +164,41 @@ async function connectToDatabase() {
 }
 
 exports.handler = async (event, context) => {
+    
     context.callbackWaitsForEmptyEventLoop = false;
     try {
         // Connect to mongodb database
         const db = await connectToDatabase();
-        const post = await db.collection('Posts').findOne({"_id" : ObjectId(event.pathParameters.postId)});
+        const post = await db.collection('Posts').findOne({"_id" : ObjectId(event.postId)});
         
         // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {
-            statusCode: 200,
-            body:   JSON.stringify({posts: post})
-        };
+        return {post}
         
     } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                errorMsg: `Error while creating a user: ${err}`,
-            }),
-        };
+        throw new Error(`Error while doing GetSinglePostMongoDB: ${err}`)
     }
 };
+
 ```
 
 ## 4. UpdateSinglePostMongoDB
 ```
 API ENDPOINT: PUT  /posts/_id
-             body : {description: xxx, imgUrl: xxx, type: xxx}
-_id above is the post id being previously created by database automatically             
+             body : {content: xxx, imgUrl: xxx, type: xxx}
+_id above is the post id being previously created by database automatically 
+
+    ** Integration Request (When there are no templates defined (recommended) 
+    application/json,
+    {
+        "body" : $input.json('$'),
+        "user" : {
+            "id" : "$context.authorizer.claims.sub",
+            "username" : "$context.authorizer.claims['cognito:username']",
+            "email" : "$context.authorizer.claims.email"
+        },
+        "postId" : "$util.escapeJavaScript($input.params('postId'))"
+    }
+
 
 const { MongoClient, ObjectId } = require('mongodb');
 const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
@@ -212,37 +219,48 @@ async function connectToDatabase() {
 }
 
 exports.handler = async (event, context) => {
+    
+
+    
     context.callbackWaitsForEmptyEventLoop = false;
     try {       
+        
         // Connect to mongodb database
         const db = await connectToDatabase();
 
         // Update database document
         const post = await db.collection('Posts').updateOne(
-            {_id: ObjectId(event.pathParameters.postId)}, 
-            {$set : { ...JSON.parse(event.body) }})
+            {_id: ObjectId(event.postId)}, 
+            {$set : event.body})
 
         // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {
-            statusCode: 200,
-            body:   JSON.stringify({posts: post})
-        };
+        return {post}
+ 
         
     } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                errorMsg: `Error while creating a user: ${err}`,
-            }),
-        };
+        throw new Error(`Error while creating a user: ${err}`)
     }
 };
+
 ```
 
 ## 5. DeleteSinglePostMongoDB
 ```
 API ENDPOINT: DELETE  /posts/_id
 _id above is the post id being previously created by database automatically
+
+
+    ** Integration Request (When there are no templates defined (recommended) 
+    application/json,
+    {
+        "body" : $input.json('$'),
+        "user" : {
+            "id" : "$context.authorizer.claims.sub",
+            "username" : "$context.authorizer.claims['cognito:username']",
+            "email" : "$context.authorizer.claims.email"
+        },
+        "postId" : "$util.escapeJavaScript($input.params('postId'))"
+    }
 
 const { MongoClient, ObjectId } = require('mongodb');
 const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
@@ -269,24 +287,188 @@ exports.handler = async (event, context) => {
          // Connect to mongodb database
         const db = await connectToDatabase();
         
-        // delete database document
+        // delet database document
         const post = await db.collection('Posts').deleteOne(
-            {_id: ObjectId(event.pathParameters.postId)})
+            {_id: ObjectId(event.postId)})
 
         // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {
-            statusCode: 200,
-            body:   JSON.stringify({posts: post})
-        };
+        return {post}
         
     } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                errorMsg: `Error while creating a user: ${err}`,
-            }),
-        };
+        throw new Error(`error while running DeleteSinglePostMongoDB, error message : ${err}`)
     }
 };
+
 ```
 
+
+## 6. CreateCommentMongoDB
+```
+API ENDPOINT: POST  /posts/{postId}/comments
+    headers: { Authentication : JWT-token }
+    body: {comment-string}
+
+    AWS Lambda Function: 
+    a) Method Request - Authorization (socialCafe User Pool), 
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))"
+        }
+
+        see https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#context-variable-reference :  "id" : "$input.params('id')",
+    c)  Method Response, Integration Response - "Access-Control-Allow-Origin" '*' 
+    d) Lambda function
+
+
+        const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+        exports.handler = async (event, context, callback) => {
+
+
+            context.callbackWaitsForEmptyEventLoop = false;
+                
+            try {
+                
+                const db = await socialCafeDB()
+                
+                const comment = await db.createComment({event})
+                
+                return {comment}
+                
+            } catch (err) {
+                throw new Error(`Error while doing CreateCommentMongoDB: ${err}`)
+            }
+        };
+
+    e) database function
+    see the function createComment in ./nodejs/socialCafeDatabase.js 
+```
+
+
+## 7. UpdateCommentMongoDB
+```
+API ENDPOINT: POST  /posts/{postId}/comments/{commentId}
+    headers: { Authentication : JWT-token }
+    body: {comment-string}
+
+    AWS Lambda Function: 
+    a) Method Request - Authorization (socialCafe User Pool), 
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))",
+            "commentId" : "$util.escapeJavaScript($input.params('commentId'))"
+        }
+
+
+        see https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#context-variable-reference :  "id" : "$input.params('id')",
+    c)  Method Response, Integration Response - "Access-Control-Allow-Origin" '*' 
+    d) Lambda function
+
+        const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+        exports.handler = async (event, context, callback) => {
+
+            context.callbackWaitsForEmptyEventLoop = false;
+                
+            try {
+                
+                const db = await socialCafeDB()
+                
+                const comment = await db.UpdateComment({event})
+                
+                return {comment, event}
+                
+            } catch (err) {
+                throw new Error(`Error while creating : ${err}`)
+            }
+        };
+    e) database function
+    see the function createComment in ./nodejs/socialCafeDatabase.js 
+```
+
+
+## 7. DeleteCommentMongoDB
+
+API ENDPOINT: 
+DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments/{commentId}
+headers: { Authentication : JWT-token }
+
+   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+    exports.handler = async (event, context, callback) => {
+
+        context.callbackWaitsForEmptyEventLoop = false;
+            
+        try {
+            
+            const db = await socialCafeDB()
+            
+            const post = await db.deleteComment({event})
+            
+            return {post};
+            
+        } catch (err) {
+            throw new Error(`Error while doing DeleteSingleCommentMongoDB : ${err}`)
+        }
+    };
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))",
+            "commentId" : "$util.escapeJavaScript($input.params('commentId'))"
+        }    
+
+
+updated 8 lambda functions above, see the picture below:
+most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
+![](https://i.imgur.com/0y8ec2y.png)        
+
+
+## 8. GetCommentsMongoDB
+API ENDPOINT: 
+GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments
+headers: { Authentication : JWT-token }
+
+   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const comments = await db.getComments({event})
+        
+        return {comments};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
