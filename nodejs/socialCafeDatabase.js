@@ -97,8 +97,18 @@ module.exports = async (event, context) => {
                 throw error
             }
         }    
+
+    }   
         
-         async function createLike({event}) {
+    async function getComments({event}) 
+    {
+        const {postId} = event
+    
+        const comments = await db.collection('Comments').find({ postId: ObjectId(postId) }).toArray()
+        return comments
+    }
+        
+    async function createLike({event}) {
 
     const {postId, userId, user} = event
     
@@ -308,10 +318,10 @@ module.exports = async (event, context) => {
         createComment,
         UpdateComment,
         deleteComment,
+        getComments,
         createLike,
         deleteLike,
         getPosts,
         getPost
-
     }
 }
