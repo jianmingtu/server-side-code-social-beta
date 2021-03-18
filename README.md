@@ -42,9 +42,9 @@ exports.handler = async (event, context, callback) => {
         
         const db = await socialCafeDB()
         
-        const post = await db.getPosts({event})
+        const posts = await db.getPosts({event})
         
-        return {post};
+        return {posts};
         
     } catch (err) {
         throw new Error(`Error while running getPostsMongoDB : ${err}`)
