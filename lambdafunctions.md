@@ -191,24 +191,34 @@ exports.handler = async (event, context, callback) => {
 };
 
 ## DeleteCommentMongoDB
-const socialCafeDB = require('./nodejs/socialCafeDatabase')
+    async function deleteComment({ event }) {
 
-exports.handler = async (event, context, callback) => {
-
-    context.callbackWaitsForEmptyEventLoop = false;
+        const {body, user, postId, commentId } = event
         
-    try {
-        
-        const db = await socialCafeDB()
-        
-        const post = await db.deleteComment({event})
-        
-        return {post};
-        
-    } catch (err) {
-        throw new Error(`Error while doing DeleteSingleCommentMongoDB : ${err}`)
-    }
-};
+        const session = client.startSession()
+        session.startTransaction()
+        try {
+          const comment = await db.collection('Comments').findOneAndDelete({_id: ObjectId(commentId)})
+          if (!comment.value) {
+            throw Error("No comment exists for this user")
+          }
+    
+          const update = {
+            $inc: {
+              "totalComments": -1
+            }
+          }
+    
+          await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, update)
+          await session.commitTransaction()
+          return comment.value
+        } catch (error) {
+          await session.abortTransaction()
+          throw error
+        } finally {
+          await session.endSession()
+        }        
+    }   
 
 ## UpdateSingleCommentMongoDB
 const socialCafeDB = require('./nodejs/socialCafeDatabase')
