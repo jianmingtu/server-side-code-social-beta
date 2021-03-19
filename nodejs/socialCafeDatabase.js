@@ -16,10 +16,99 @@ module.exports = async (event, context) => {
     // search context and username
 async function getPosts({ event }) {
   
+  const { MongoClient, ObjectId } = require('mongodb');
+const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;;
+
+
+module.exports = async (event, context) => {
+    
+
+
+    // Connect to our MongoDB database hosted on MongoDB Atlas
+    const client = await MongoClient(MONGODB_URI, {
+        useUnifiedTopology: true,
+        useNewUrlParser: true,
+    }).connect();
+    // Specify which database we want to use
+    const db = client.db('socialCafe');
+    
+    async function createPost({user, body})  {     
+        return await db.collection('Posts').insertOne({
+            ...body,
+            totalLikes: 0,
+            totalComments: 0,
+            timestamp: Date.now(),
+            user,            
+        })
+    }
+    
+     async function createComment({user, body, postId }) {
+
+        const {comment} = body
+        
+        const session = client.startSession()
+        session.startTransaction()
+        try {
+            
+            //  insert comment
+            const result = await db.collection('Comments').insertOne({
+                comment,
+                postId: ObjectId(postId),
+                user,  
+                timestamp: Date.now()
+            })
+    
+            //  increase total
+              await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, {$inc: { "totalComments": 1 }})
+              
+              await session.commitTransaction()
+              
+              return result.ops[0]
+        } catch (error) {
+              await session.abortTransaction()
+              throw error
+        } finally {
+            await session.endSession()
+        }
+    }
+    
+    
+    async function UpdateComment({ event }) {
+
+        const {body, user, postId, commentId } = event
+        
+        try {
+            
+
+            //  update comment 
+            const result = await db.collection('Comments').updateOne(
+                {_id: ObjectId(commentId)}
+                ,
+                {$set :
+                    {
+                        ...body,
+                        postId: ObjectId(postId),
+                        user,  
+                        timestamp: Date.now()
+                    }
+                })
+              
+            return result
+        } catch (error) {
+              throw error
+        }
+    } 
+    
+    
+// search context and username
+async function getPosts({ event }) {
+  
   const { search = null, limit = 100, skip = 0} = event 
+
 
     const aggregateOptions = [
       {
+        // get all likes useId associated to this post
         $lookup: {
           from: 'Likes',
           as: 'likes',
@@ -40,38 +129,11 @@ async function getPosts({ event }) {
         },
       },
       { $addFields: {
-        "liked": { "$size": "$likes" }
+        "likeUserIds": '$likes.user.id'
       }},
       { $project: {
          "likes": 0
-      }},
-      {
-
-        $lookup: {
-          from: 'Comments',
-          as: 'comments',
-          let: {
-            'postId': '$_id',
-          },
-          pipeline: [
-            {
-                $match: { 
-                      $expr: {
-                        $and: [ 
-                          { $eq: ['$postId', '$$postId'] }
-                        ]
-                      }     
-                }
-            }
-          ]
-        }
-      },
-      { $addFields: {
-        "commented": { "$size": "$comments" }
-      }},
-      { $project: {
-         "comments": 0
-      }}      
+      }}     
     ]
     
     if (search) {
@@ -90,6 +152,14 @@ async function getPosts({ event }) {
     return await db.collection('Posts').aggregate(aggregateOptions).sort({ timestamp: -1, likes: 1}).skip(skip).limit(limit || 20).toArray()
   }
 
+    return {
+        createPost,
+        createComment,
+        UpdateComment,
+        getPosts
+    }
+}
+
 
      async function createPost({user, body})  {     
         return await db.collection('Posts').insertOne({
@@ -101,9 +171,9 @@ async function getPosts({ event }) {
         })
     }
 
-  async function getPost({ event }) {
+async function getPost({ event }) {
         
-    const {postId} = event
+    const {postId, userId} = event
     
     const results = await db.collection('Posts').aggregate([
       {
@@ -148,23 +218,17 @@ async function getPosts({ event }) {
         ]
       },
     },
-    { $addFields: {
-      "liked": { "$size": "$likes" }
-    }},
-    { $project: {
-      "likes": 0
-    }}
-
+      { $addFields: {
+        "likeUserIds": '$likes.user.id'
+      }},
+      { $project: {
+         "likes": 0
+      }}  
     ]).limit(1).toArray()
 
     return results[0]
   }
 
-
-    return {
-        getPost
-    }
-}    
 
     async function getComments({event}) 
     {
