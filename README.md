@@ -29,47 +29,17 @@ Update a Post By Id
 We should have already created a cognito user pool, but since we did not document it anyway, so we are going to add the cognitor section here and move this content to somewhere (maybe the front-end readme file or )  
 
 ## 1) GetPostsMongoDB
-API ENDPOINT: GET  /posts/
+API ENDPOINT: GET  /posts?search=bcitjimmy 
+              GET  /posts?search=Brother Bang
 ```
-const { MongoClient } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
-exports.handler = async (event, context) => {
-    context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-        
-        const posts = await db.collection('Posts').find({}).toArray();
-            
-        return {
-            posts: posts
-        };
+a) see lambdafunctions.md for source codes
 
-    } catch (err) {
-        return {
-            statusCode: 500,
-            headers:{ 'Access-Control-Allow-Origin' : '*' },
-            body: JSON.stringify({
-                errorMsg: `Error while doing getPostsMongoDB: ${err}`,
-            }),
-        };
-    }
-};
+b)   Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+{
+    "search": "$util.escapeJavaScript($input.params().querystring.get('search'))"
+}
 
 ```
 
@@ -102,30 +72,7 @@ exports.handler = async (event, context) => {
         1) we have add 'Access-Control-Allow-Origin' : '*' in API Lambda's response
         2) API GateWay, select socialCafeAPI, resources (left panel), select POST,  Method Response, add 'Access-Control-Allow-Origin'. go back to the POST's Integration Response, write '*' as Mapping value to Response header 'Access-Control-Allow-Origin'
 
-    f) AWS Lambda API interface CreatePostMongoDB
-
-        const socialCafeDB = require('./nodejs/socialCafeDatabase')
-
-        exports.handler = async (event, context, callback) => {
-
-            context.callbackWaitsForEmptyEventLoop = false;
-                
-            try {
-                
-                const body = event.body
-                const user = event.user
-                
-                const db = await socialCafeDB()
-                
-                const post = await db.createPost({user, body})
-                
-                return {post};
-                
-            } catch (err) {
-                throw new Error(`Error while creating : ${err}`)
-            }
-        };
-
+    f) see lambdafunctions.md for source codes
 ```
 
 ## 3) GetSinglePostMongDB 
@@ -133,7 +80,7 @@ exports.handler = async (event, context) => {
  API ENDPOINT: POST  /posts/_id
 _id above is the post id being previously created by database automatically
 
-    ** Integration Request (When there are no templates defined (recommended) 
+    a) ** Integration Request (When there are no templates defined (recommended) 
     application/json,
     {
         "body" : $input.json('$'),
@@ -145,39 +92,7 @@ _id above is the post id being previously created by database automatically
         "postId" : "$util.escapeJavaScript($input.params('postId'))"
     }
 
-const { MongoClient, ObjectId } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
-
-exports.handler = async (event, context) => {
-    
-    context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-        const post = await db.collection('Posts').findOne({"_id" : ObjectId(event.postId)});
-        
-        // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {post}
-        
-    } catch (err) {
-        throw new Error(`Error while doing GetSinglePostMongoDB: ${err}`)
-    }
-};
+    b) see lambdafunctions.md for source codes
 
 ```
 
@@ -187,7 +102,7 @@ API ENDPOINT: PUT  /posts/_id
              body : {content: xxx, imgUrl: xxx, type: xxx}
 _id above is the post id being previously created by database automatically 
 
-    ** Integration Request (When there are no templates defined (recommended) 
+    a) ** Integration Request (When there are no templates defined (recommended) 
     application/json,
     {
         "body" : $input.json('$'),
@@ -199,48 +114,7 @@ _id above is the post id being previously created by database automatically
         "postId" : "$util.escapeJavaScript($input.params('postId'))"
     }
 
-
-const { MongoClient, ObjectId } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
-
-exports.handler = async (event, context) => {
-    
-
-    
-    context.callbackWaitsForEmptyEventLoop = false;
-    try {       
-        
-        // Connect to mongodb database
-        const db = await connectToDatabase();
-
-        // Update database document
-        const post = await db.collection('Posts').updateOne(
-            {_id: ObjectId(event.postId)}, 
-            {$set : event.body})
-
-        // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {post}
- 
-        
-    } catch (err) {
-        throw new Error(`Error while creating a user: ${err}`)
-    }
-};
+    b) see lambdafunctions.md for source codes
 
 ```
 
@@ -250,7 +124,7 @@ API ENDPOINT: DELETE  /posts/_id
 _id above is the post id being previously created by database automatically
 
 
-    ** Integration Request (When there are no templates defined (recommended) 
+    a)  Integration Request (When there are no templates defined (recommended) 
     application/json,
     {
         "body" : $input.json('$'),
@@ -262,42 +136,7 @@ _id above is the post id being previously created by database automatically
         "postId" : "$util.escapeJavaScript($input.params('postId'))"
     }
 
-const { MongoClient, ObjectId } = require('mongodb');
-const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;
-let cachedDb = null;
-async function connectToDatabase() {
-    if (cachedDb) {
-        return cachedDb;
-    }
-    // Connect to our MongoDB database hosted on MongoDB Atlas
-    const client = await MongoClient(MONGODB_URI, {
-        useUnifiedTopology: true,
-        useNewUrlParser: true,
-    }).connect();
-    // Specify which database we want to use
-    const db = client.db('socialCafe');
-    cachedDb = db;
-    return db;
-}
-
-exports.handler = async (event, context) => {
-    context.callbackWaitsForEmptyEventLoop = false;
-    try {
-        
-         // Connect to mongodb database
-        const db = await connectToDatabase();
-        
-        // delet database document
-        const post = await db.collection('Posts').deleteOne(
-            {_id: ObjectId(event.postId)})
-
-        // do not remove the statusCode below, otherwise,  it will cause malformed Proxy response
-        return {post}
-        
-    } catch (err) {
-        throw new Error(`error while running DeleteSinglePostMongoDB, error message : ${err}`)
-    }
-};
+    b) see lambdafunctions.md for source codes
 
 ```
 
@@ -324,31 +163,7 @@ API ENDPOINT: POST  /posts/{postId}/comments
 
         see https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#context-variable-reference :  "id" : "$input.params('id')",
     c)  Method Response, Integration Response - "Access-Control-Allow-Origin" '*' 
-    d) Lambda function
-
-
-        const socialCafeDB = require('./nodejs/socialCafeDatabase')
-
-        exports.handler = async (event, context, callback) => {
-
-
-            context.callbackWaitsForEmptyEventLoop = false;
-                
-            try {
-                
-                const db = await socialCafeDB()
-                
-                const comment = await db.createComment({event})
-                
-                return {comment}
-                
-            } catch (err) {
-                throw new Error(`Error while doing CreateCommentMongoDB: ${err}`)
-            }
-        };
-
-    e) database function
-    see the function createComment in ./nodejs/socialCafeDatabase.js 
+    d) see lambdafunctions.md for source codes
 ```
 
 
@@ -358,7 +173,6 @@ API ENDPOINT: POST  /posts/{postId}/comments/{commentId}
     headers: { Authentication : JWT-token }
     body: {comment-string}
 
-    AWS Lambda Function: 
     a) Method Request - Authorization (socialCafe User Pool), 
     b) Integration Request (When there are no templates defined (recommended) 
         application/json,
@@ -378,30 +192,8 @@ API ENDPOINT: POST  /posts/{postId}/comments/{commentId}
 
         see https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#context-variable-reference :  "id" : "$input.params('id')",
     c)  Method Response, Integration Response - "Access-Control-Allow-Origin" '*' 
-    d) Lambda function
-
-        const socialCafeDB = require('./nodejs/socialCafeDatabase')
-
-        exports.handler = async (event, context, callback) => {
-
-            context.callbackWaitsForEmptyEventLoop = false;
-                
-            try {
-                
-                const db = await socialCafeDB()
-                
-                const comment = await db.UpdateComment({event})
-                
-                return {comment, event}
-                
-            } catch (err) {
-                throw new Error(`Error while creating : ${err}`)
-            }
-        };
-    e) database function
-    see the function createComment in ./nodejs/socialCafeDatabase.js 
+    d) see lambdafunctions.md for source codes
 ```
-
 
 ## 7. DeleteCommentMongoDB
 
@@ -409,24 +201,7 @@ API ENDPOINT:
 DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments/{commentId}
 headers: { Authentication : JWT-token }
 
-   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
-
-    exports.handler = async (event, context, callback) => {
-
-        context.callbackWaitsForEmptyEventLoop = false;
-            
-        try {
-            
-            const db = await socialCafeDB()
-            
-            const post = await db.deleteComment({event})
-            
-            return {post};
-            
-        } catch (err) {
-            throw new Error(`Error while doing DeleteSingleCommentMongoDB : ${err}`)
-        }
-    };
+   a) see lambdafunctions.md for source codes
 
     b) Integration Request (When there are no templates defined (recommended) 
         application/json,
@@ -448,27 +223,7 @@ API ENDPOINT:
 GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/comments
 headers: { Authentication : JWT-token }
 
-   a) const socialCafeDB = require('./nodejs/socialCafeDatabase')
-
-exports.handler = async (event, context, callback) => {
-
-    context.callbackWaitsForEmptyEventLoop = false;
-        
-    try {
-        
-        const db = await socialCafeDB()
-        
-        const post = await db.deleteLike({event})
-        
-        return {post};
-        const comments = await db.getComments({event})
-        
-        return {comments};
-        
-    } catch (err) {
-        throw new Error(`Error while creating : ${err}`)
-    }
-};
+   a)  see lambdafunctions.md for source codes
 
 
     b) Integration Request (When there are no templates defined (recommended) 
@@ -491,36 +246,7 @@ API ENDPOINT:
 POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/{postId}/likes
 headers: { Authentication : JWT-token }
 
-   a) const session = client.startSession()
-    session.startTransaction()
-    try {
-      const result = await db.collection('Likes').insertOne({
-        postId: ObjectId(postId),
-        user,
-        timestamp: Date.now()
-      })
-
-      const update = {
-        $inc: {
-          "totalLikes": 1
-        }
-      }
-
-      await db.collection('Posts').findOneAndUpdate({ "_id": ObjectId(postId) }, update)
-      await session.commitTransaction()
-      return result.ops[0]
-    } catch (error) {
-      await session.abortTransaction()
-      throw error
-    } finally {
-      await session.endSession()
-    }
-  }
-  
-  return {
-    createLike
-  }
-}
+   a) see lambdafunctions.md for source codes
 
     b) Integration Request (When there are no templates defined (recommended) 
         application/json,
@@ -540,8 +266,27 @@ headers: { Authentication : JWT-token }
 
 API ENDPOINT: 
 DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f60efe2d0007427875/likes
-![](https://i.imgur.com/0y8ec2y.png)        
 
-## 11. Conclusion 
+    a) see lambdafunctions.md for source codes
+
+
+   b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            },
+            "postId" : "$util.escapeJavaScript($input.params('postId'))"
+        }  
+
+## 11. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+
+## 12. Conclusion 
 
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
+    ![](https://i.imgur.com/sJNtODX.png)
