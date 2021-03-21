@@ -380,6 +380,26 @@ async function getPost({ event }) {
     }
   }
 
+       async function createUser({event}) {
+
+       
+        try {
+            
+            const post = await db.collection('Users').insertOne(
+            {
+                username: event.userName,
+                sub: event.request.userAttributes.sub,
+                email: event.request.userAttributes.email,
+                avatar: "https://s3.console.aws.amazon.com/s3/object/socialcafe?region=us-east-2&prefix=default-avatar-icon-68.png",
+                confirmedTimestamp: Date.now()
+                
+            })
+
+        } catch (error) {
+              throw error
+        } 
+    }
+
 
      return {
         getPosts,
@@ -391,5 +411,6 @@ async function getPost({ event }) {
         UpdateComment,
         deleteLike,
         createLike,
+        createUser,
     }
 }

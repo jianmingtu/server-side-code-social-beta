@@ -284,9 +284,68 @@ DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f
             "postId" : "$util.escapeJavaScript($input.params('postId'))"
         }  
 
-## 11. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+## 11 Create Users after email Confirmation
 
-## 12. Conclusion 
+var aws = require('aws-sdk');
+var ses = new aws.SES();
+
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+// https://aws.amazon.com/ses/pricing/
+// https://medium.com/hackernoon/how-to-add-new-cognito-users-to-dynamodb-using-lambda-e3f55541297c
+// https://datacadamia.com/aws/cognito/js_identity
+// https://medium.com/@gmonne/custom-authentication-using-aws-cognito-e0b489badc3f
+// https://www.npmjs.com/package/amazon-cognito-identity-js
+// https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/s3-example-photo-album.html
+async function sendEmail(to, body) {
+    var eParams = {
+        Destination: {
+            ToAddresses: [to]
+        },
+        Message: {
+            Body: {
+                Text: {
+                    Data: body
+                }
+            },
+            Subject: {
+                Data: "Cognito Identity Provider registration completed"
+            }
+        },
+
+        // Replace source_email with your SES validated email address
+        Source: "<jtu@my.bcit.ca>"
+    };
+
+    await ses.sendEmail(eParams)
+
+};
+
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+
+        const db = await socialCafeDB()
+        
+        const post = await db.createUser({event})
+        
+        await sendEmail(event.request.userAttributes.email, "Congratulations " + event.userName + ", you have been confirmed: ")
+        
+        return event;
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
+
+## 12. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+
+## 13. Conclusion 
+
 
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
     ![](https://i.imgur.com/sJNtODX.png)
