@@ -285,6 +285,9 @@ DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f
         }  
 
 ## 11 Create Users after email Confirmation
+    in Cognitor,  when we create a user pool,  we trigger a Post confirmation function userAuthConfirmedMongoDB so that right after users register and confirm a verified email, cognitor will send a request to this Lambda function, which creates a new user in Users table.  
+
+    ![](https://i.imgur.com/LgCExrd.png)
 
 var aws = require('aws-sdk');
 var ses = new aws.SES();
