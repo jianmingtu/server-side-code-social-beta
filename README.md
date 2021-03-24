@@ -284,9 +284,122 @@ DELETE https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/posts/6050f0f
             "postId" : "$util.escapeJavaScript($input.params('postId'))"
         }  
 
-## 11. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+## 11 Create Users after email Confirmation
+    in Cognitor,  when we create a user pool,  we trigger a Post confirmation function userAuthConfirmedMongoDB so that right after users register and confirm a verified email, cognitor will send a request to this Lambda function, which creates a new user in Users table.  
 
-## 12. Conclusion 
+    ![](https://i.imgur.com/LgCExrd.png)
+
+var aws = require('aws-sdk');
+var ses = new aws.SES();
+
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+// https://aws.amazon.com/ses/pricing/
+// https://medium.com/hackernoon/how-to-add-new-cognito-users-to-dynamodb-using-lambda-e3f55541297c
+// https://datacadamia.com/aws/cognito/js_identity
+// https://medium.com/@gmonne/custom-authentication-using-aws-cognito-e0b489badc3f
+// https://www.npmjs.com/package/amazon-cognito-identity-js
+// https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/s3-example-photo-album.html
+async function sendEmail(to, body) {
+    var eParams = {
+        Destination: {
+            ToAddresses: [to]
+        },
+        Message: {
+            Body: {
+                Text: {
+                    Data: body
+                }
+            },
+            Subject: {
+                Data: "Cognito Identity Provider registration completed"
+            }
+        },
+
+        // Replace source_email with your SES validated email address
+        Source: "<jtu@my.bcit.ca>"
+    };
+
+    await ses.sendEmail(eParams)
+
+};
+
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+
+        const db = await socialCafeDB()
+        
+        const post = await db.createUser({event})
+        
+        await sendEmail(event.request.userAttributes.email, "Congratulations " + event.userName + ", you have been confirmed: ")
+        
+        return event;
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
+
+## 12. socialCafeSecureTokenS3
+
+API ENDPOINT: 
+GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/secureUrl/
+headers: { Authentication : JWT-token }
+
+
+   a) see lambdafunctions.md for source codes
+
+    b) the function accepts a registered user's request and returns an AWS S3 bucket's image link for the user to upload his image. 
+
+
+## 13. UpdateUserMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/
+headers: { Authentication : JWT-token }
+body: {avatar: "https://socialcafe.s3.us-east-2.amazonaws.com/443792",  description: "xxxxx"}
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            }
+        }  
+
+## 14. GetUserMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/{userId}
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+    {
+        "body" : $input.json('$'),
+        "userId" : "$util.escapeJavaScript($input.params('userId'))"
+    }
+
+
+
+## 15. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+
+## 16. Conclusion 
+
 
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
-    ![](https://i.imgur.com/sJNtODX.png)
+![](https://i.imgur.com/ZITYlf8.png)

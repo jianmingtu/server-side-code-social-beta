@@ -100,7 +100,6 @@ module.exports = async (event, context) => {
     } 
     
     
-// search context and username
 async function getPosts({ event }) {
   
   const { search = null, limit = 100, skip = 0} = event 
@@ -133,7 +132,38 @@ async function getPosts({ event }) {
       }},
       { $project: {
          "likes": 0
-      }}     
+      }},
+
+
+
+
+      {
+        $lookup: {
+          from: 'Users',
+          as: 'users',
+          let: {
+            'sub': '$user.id',
+          },
+          pipeline: [
+            {
+              $match: { 
+                $expr: {
+                  $and: [ 
+                    { $eq: ['$sub', '$$sub'] }
+                  ]
+                } 
+              }
+            }
+          ]
+        },
+      },
+      { $addFields: {
+        'user.avatar': '$users.avatar'
+      }},
+      { $project: {
+         "users": 0
+      }}  
+      
     ]
     
     if (search) {
@@ -151,6 +181,7 @@ async function getPosts({ event }) {
  
     return await db.collection('Posts').aggregate(aggregateOptions).sort({ timestamp: -1, likes: 1}).skip(skip).limit(limit || 20).toArray()
   }
+
 
     return {
         createPost,
@@ -171,7 +202,7 @@ async function getPosts({ event }) {
         })
     }
 
-async function getPost({ event }) {
+   async function getPost({ event }) {
         
     const {postId, userId} = event
     
@@ -200,42 +231,77 @@ async function getPost({ event }) {
       },
       {
         $lookup: {
-        from: 'Likes',
-        as: 'likes',
-        let: {
-          'postId': '$_id',
-        },
-        pipeline: [
-          {
-            $match: { 
-              $expr: {
-                $and: [ 
-                  { $eq: ['$postId', '$$postId'] }
-                ]
-              } 
+          from: 'Likes',
+          as: 'likes',
+          let: {
+            'postId': '$_id',
+          },
+          pipeline: [
+            {
+              $match: { 
+                $expr: {
+                  $and: [ 
+                    { $eq: ['$postId', '$$postId'] }
+                  ]
+                } 
+              }
             }
-          }
-        ]
+          ]
+        },
       },
-    },
       { $addFields: {
         "likeUserIds": '$likes.user.id'
       }},
       { $project: {
          "likes": 0
+      }},
+      
+      {
+        $lookup: {
+          from: 'Users',
+          as: 'users',
+          let: {
+            'sub': '$user.id',
+          },
+          pipeline: [
+            {
+              $match: { 
+                $expr: {
+                  $and: [ 
+                    { $eq: ['$sub', '$$sub'] }
+                  ]
+                } 
+              }
+            }
+          ]
+        },
+      },
+      { $addFields: {
+        'user.avatar': '$users.avatar'
+      }},
+      { $project: {
+         "users": 0
       }}  
+      
+      
     ]).limit(1).toArray()
 
     return results[0]
   }
 
-
     async function getComments({event}) 
     {
         const {postId} = event
     
-        const comments = await db.collection('Comments').find({ postId: ObjectId(postId) }).toArray()
-        return comments
+        // const comments = await db.collection('Comments').find({ postId: ObjectId(postId) }).toArray()
+        // return comments
+
+        const aggregateOptions = [
+            {$match: {postId: ObjectId(postId)}},
+        ]
+ 
+        return await db.collection('Comments').aggregate(aggregateOptions).toArray()
+        
     }
 
 
@@ -380,6 +446,65 @@ async function getPost({ event }) {
     }
   }
 
+       async function createUser({event}) {
+
+       
+        try {
+            
+            const post = await db.collection('Users').insertOne(
+            {
+                username: event.userName,
+                sub: event.request.userAttributes.sub,
+                email: event.request.userAttributes.email,
+                avatar: "https://s3.console.aws.amazon.com/s3/object/socialcafe?region=us-east-2&prefix=default-avatar-icon-68.png",
+                confirmedTimestamp: Date.now()
+                
+            })
+
+        } catch (error) {
+              throw error
+        } 
+    }
+
+  async function UpdateUser({ event }) {
+
+        const {body, user } = event
+        const {avatar, description} = body
+        
+        try {
+            
+
+            //  update user 
+            const result = await db.collection('Users').updateOne(
+                 {sub: user.id}
+                 ,
+                 {$set :
+                     {
+                         avatar: avatar,
+                         description : description,  
+                         timestamp: Date.now()
+                     }
+                 })
+              
+             return {result}
+        } catch (error) {
+              throw error
+        }
+    }        
+
+   async function getUser({event}) {
+
+        const {userId} = event
+        
+        try {
+            
+            return await db.collection('Users').findOne({sub : userId})
+              
+        } catch (error) {
+              throw error
+        } 
+    }    
+
 
      return {
         getPosts,
@@ -391,5 +516,8 @@ async function getPost({ event }) {
         UpdateComment,
         deleteLike,
         createLike,
+        createUser,
+        UpdateUser,
+        getUser
     }
 }
