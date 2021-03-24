@@ -400,6 +400,45 @@ async function getPost({ event }) {
         } 
     }
 
+  async function UpdateUser({ event }) {
+
+        const {body, user } = event
+        const {avatar, description} = body
+        
+        try {
+            
+
+            //  update user 
+            const result = await db.collection('Users').updateOne(
+                 {sub: user.id}
+                 ,
+                 {$set :
+                     {
+                         avatar: avatar,
+                         description : description,  
+                         timestamp: Date.now()
+                     }
+                 })
+              
+             return {result}
+        } catch (error) {
+              throw error
+        }
+    }        
+
+   async function getUser({event}) {
+
+        const {userId} = event
+        
+        try {
+            
+            return await db.collection('Users').findOne({sub : userId})
+              
+        } catch (error) {
+              throw error
+        } 
+    }    
+
 
      return {
         getPosts,
@@ -412,5 +451,7 @@ async function getPost({ event }) {
         deleteLike,
         createLike,
         createUser,
+        UpdateUser,
+        getUser
     }
 }

@@ -345,10 +345,61 @@ exports.handler = async (event, context, callback) => {
     }
 };
 
-## 12. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+## 12. socialCafeSecureTokenS3
 
-## 13. Conclusion 
+API ENDPOINT: 
+GET https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/secureUrl/
+headers: { Authentication : JWT-token }
+
+
+   a) see lambdafunctions.md for source codes
+
+    b) the function accepts a registered user's request and returns an AWS S3 bucket's image link for the user to upload his image. 
+
+
+## 13. UpdateUserMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/
+headers: { Authentication : JWT-token }
+body: {avatar: "https://socialcafe.s3.us-east-2.amazonaws.com/443792",  description: "xxxxx"}
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+
+        {
+            "body" : $input.json('$'),
+            "user" : {
+                "id" : "$context.authorizer.claims.sub",
+                "username" : "$context.authorizer.claims['cognito:username']",
+                "email" : "$context.authorizer.claims.email"
+            }
+        }  
+
+## 14. GetUserMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/{userId}
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+    {
+        "body" : $input.json('$'),
+        "userId" : "$util.escapeJavaScript($input.params('userId'))"
+    }
+
+
+
+## 15. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
+
+## 16. Conclusion 
 
 
 most important is we do not use the proxy in our project anymore because we need more layers on the API Gateway. If using proxy, the API tree only supports up to 2 layers, which are the bottom /, /uppers, /{upper-id+}
-    ![](https://i.imgur.com/sJNtODX.png)
+![](https://i.imgur.com/ZITYlf8.png)

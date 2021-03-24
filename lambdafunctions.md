@@ -279,3 +279,74 @@ exports.handler = async (event, context, callback) => {
         throw new Error(`Error while creating : ${err}`)
     }
 };
+
+## socialCafeSecureTokenS3
+const S3 = require('aws-sdk/clients/s3')
+
+const getUploadURL = async function(event) {
+    const s3 = new S3({
+        region : 'us-east-2',
+        signatureVersion: 'v4'
+    })
+    
+    const randomID = parseInt(Math.random() * 10000000)
+    const Key = `${randomID}`
+    
+     const s3Params = {
+         Bucket: 'socialcafe',
+         Key,
+         Expires: 60,
+     }
+     
+     const uploadURL = await s3.getSignedUrlPromise('putObject', s3Params)
+     
+     return  {
+          uploadURL: uploadURL,
+          Key
+      }
+}
+
+exports.handler = async (event) => {
+    return await getUploadURL(event)
+};
+
+## UpdateUserMongoDB
+
+a)     const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+    exports.handler = async (event, context, callback) => {
+
+        context.callbackWaitsForEmptyEventLoop = false;
+            
+        try {
+
+            const db = await socialCafeDB()
+            
+            const result = await db.UpdateUser({event})
+            
+            return {result};
+            
+        } catch (err) {
+            throw new Error(`Error while creating : ${err}`)
+        }
+    };
+
+## GetUserMongoDB
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const user = await db.getUser({event})
+        
+        return {user};
+        
+    } catch (err) {
+        throw new Error(`Error while doing GetUserMongoDB : ${err}`)
+    }
+};
