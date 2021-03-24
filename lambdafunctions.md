@@ -350,3 +350,55 @@ exports.handler = async (event, context, callback) => {
         throw new Error(`Error while doing GetUserMongoDB : ${err}`)
     }
 };
+
+## CreateFollowerMongoDB
+const { MongoClient, ObjectId } = require('mongodb');
+const MONGODB_URI = `mongodb+srv://team8:team8@cluster0.kgzz2.mongodb.net/socialCafe?retryWrites=true&w=majority`;;
+
+
+module.exports = async (event, context) => {
+    
+    // Connect to our MongoDB database hosted on MongoDB Atlas
+    const client = await MongoClient(MONGODB_URI, {
+        useUnifiedTopology: true,
+        useNewUrlParser: true,
+    }).connect();
+    // Specify which database we want to use
+    const db = client.db('socialCafe');
+    
+    async function createFollower({event})  {     
+        
+        const {userId, user} = event
+        
+        return await db.collection('Users').update(
+           { _id: ObjectId(userId) },
+           { $push: { followers: user.id } }
+        )
+     
+    }
+
+    return {
+        createFollower
+    }
+}
+
+
+## DeleteFollowerMongoDB
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const follower = await db.deleteFollower({event})
+        
+        return {follower};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};

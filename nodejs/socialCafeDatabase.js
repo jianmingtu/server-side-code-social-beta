@@ -503,6 +503,29 @@ async function getPosts({ event }) {
         } catch (error) {
               throw error
         } 
+    }   
+    
+    async function createFollower({event})  {     
+        
+        const {userId, user} = event
+        
+        return await db.collection('Users').update(
+           { _id: ObjectId(userId) },
+           { $push: { followers: user.id } }
+        )
+     
+    }    
+
+        async function deleteFollower({event})  {     
+        
+        const {userId, user} = event
+        
+        return await db.collection('Users').update(
+           { _id: ObjectId(userId) },
+           { $pull: { followers: user.id } },
+            { multi: true }
+        )
+     
     }    
 
 
@@ -518,6 +541,8 @@ async function getPosts({ event }) {
         createLike,
         createUser,
         UpdateUser,
-        getUser
+        getUser,
+        createFollower,
+        deleteFollower
     }
 }
