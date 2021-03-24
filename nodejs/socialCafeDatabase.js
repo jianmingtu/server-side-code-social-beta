@@ -510,21 +510,23 @@ async function getPosts({ event }) {
         const {userId, user} = event
         
         return await db.collection('Users').update(
-           { _id: ObjectId(userId) },
+           { sub: userId },
            { $push: { followers: user.id } }
         )
      
-    }    
+    }  
 
         async function deleteFollower({event})  {     
         
         const {userId, user} = event
         
         return await db.collection('Users').update(
-           { _id: ObjectId(userId) },
+           { sub: userId },
            { $pull: { followers: user.id } },
             { multi: true }
         )
+     
+    }
      
     }    
 
