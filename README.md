@@ -34,12 +34,7 @@ API ENDPOINT: GET  /posts?search=bcitjimmy
 ```
 a) see lambdafunctions.md for source codes
 
-b)   Integration Request (When there are no templates defined (recommended) 
-        application/json,
-
-{
-    "search": "$util.escapeJavaScript($input.params().querystring.get('search'))"
-}
+b)   Integration Request : Use Lambda Proxy integration
 
 ```
 
