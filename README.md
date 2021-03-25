@@ -395,6 +395,49 @@ POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/{userId}
     }
 
 
+## 15. CreateFollowerMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/{userId}/followers
+headers: { Authentication : JWT-token }
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+{
+    "body" : $input.json('$'),
+    "user" : {
+        "id" : "$context.authorizer.claims.sub",
+        "username" : "$context.authorizer.claims['cognito:username']",
+        "email" : "$context.authorizer.claims.email"
+    },
+    "userId" : "$util.escapeJavaScript($input.params('userId'))"
+} 
+
+
+## 16. DeleteFollowerMongoDB
+
+API ENDPOINT: 
+POST https://lpmp2m4ovd.execute-api.us-east-2.amazonaws.com/prod/users/{userId}/followers
+headers: { Authentication : JWT-token }
+
+   a) see lambdafunctions.md for source codes
+
+    b) Integration Request (When there are no templates defined (recommended) 
+        application/json,
+
+{
+    "body" : $input.json('$'),
+    "user" : {
+        "id" : "$context.authorizer.claims.sub",
+        "username" : "$context.authorizer.claims['cognito:username']",
+        "email" : "$context.authorizer.claims.email"
+    },
+    "userId" : "$util.escapeJavaScript($input.params('userId'))"
+} 
+
 
 ## 15. [lambdafunctions.md contains the missing Lambda functions being part of the README.md's Lambda functions](lambdafunctions.md)
 

@@ -350,3 +350,43 @@ exports.handler = async (event, context, callback) => {
         throw new Error(`Error while doing GetUserMongoDB : ${err}`)
     }
 };
+
+## CreateFollowerMongoDB
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const post = await db.createFollower({event})
+        
+        return {post};
+        
+    } catch (err) {
+        throw new Error(`Error while doing CreateFollowerMongoDB : ${err}`)
+    }
+};
+
+## DeleteFollowerMongoDB
+const socialCafeDB = require('./nodejs/socialCafeDatabase')
+
+exports.handler = async (event, context, callback) => {
+
+    context.callbackWaitsForEmptyEventLoop = false;
+        
+    try {
+        
+        const db = await socialCafeDB()
+        
+        const follower = await db.deleteFollower({event})
+        
+        return {follower};
+        
+    } catch (err) {
+        throw new Error(`Error while creating : ${err}`)
+    }
+};
