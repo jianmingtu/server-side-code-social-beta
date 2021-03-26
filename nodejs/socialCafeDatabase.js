@@ -509,12 +509,19 @@ async function getPosts({ event }) {
         
         const {userId, user} = event
         
+        const find = await db.collection('Users').findOne(
+         { sub: userId, followers: { $in: [user.id] } })
+      
+
+        if(find)
+            return find
+        
         return await db.collection('Users').update(
            { sub: userId },
            { $push: { followers: user.id } }
         )
      
-    }  
+    } 
 
         async function deleteFollower({event})  {     
         
@@ -522,9 +529,11 @@ async function getPosts({ event }) {
         
         return await db.collection('Users').update(
            { sub: userId },
-           { $pull: { followers: user.id } },
+           { $pull: { followers: { $in: [ user.id ] }} },
             { multi: true }
         )
+     
+    }
      
     }
      
